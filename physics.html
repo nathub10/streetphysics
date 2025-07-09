@@ -1,0 +1,264 @@
+<!DOCTYPE html>
+<html>
+<head>
+  <title>Satoliya Game</title>
+  <style>
+    body {
+      margin: 0;
+      font-family: sans-serif;
+      background-color: #e0f7fa;
+    }
+    h1 {
+      text-align: center;
+      color: #01579b;
+      margin-top: 20px;
+      font-size: 28px;
+    }
+    .game-container {
+      position: relative;
+      width: 800px;
+      height: 500px;
+      margin: 20px auto;
+      background-color: #b3e5fc;
+      border: 2px solid #0288d1;
+      overflow: hidden;
+    }
+    .stack {
+      position: absolute;
+      bottom: 100px;
+      left: 375px;
+      display: flex;
+      flex-direction: column-reverse;
+      align-items: center;
+    }
+    .stone {
+      width: 50px;
+      height: 20px;
+      background-color: brown;
+      margin-bottom: 2px;
+    }
+    .ball {
+      position: absolute;
+      width: 30px;
+      height: 30px;
+      border-radius: 50%;
+      background-color: green;
+      left: 100px;
+      top: 420px;
+      cursor: pointer;
+    }
+    .scoreboard {
+      position: absolute;
+      bottom: 10px;
+      left: 10px;
+      background: white;
+      padding: 10px;
+      border: 2px solid black;
+    }
+    .timer {
+      position: absolute;
+      bottom: 10px;
+      left: 150px;
+      background: white;
+      padding: 10px;
+      border: 2px solid black;
+      font-weight: bold;
+    }
+    .start-btn {
+      position: absolute;
+      bottom: 10px;
+      right: 10px;
+      padding: 10px 20px;
+      background-color: #4caf50;
+      color: white;
+      border: none;
+      cursor: pointer;
+      font-weight: bold;
+    }
+    .physics-info {
+      position: absolute;
+      top: 10px;
+      left: 10px;
+      background: #fff3cd;
+      padding: 10px;
+      border: 1px solid #f0ad4e;
+      font-size: 14px;
+      max-width: 320px;
+    }
+    .trajectory {
+      position: absolute;
+      width: 3px;
+      background-color: red;
+      z-index: 1;
+    }
+    .impact-msg, .rebuild-msg, .info-msg, .inertia-line {
+      position: absolute;
+      color: darkred;
+      font-weight: bold;
+      font-size: 14px;
+      animation: fadeOut 3s forwards;
+    }
+    .inertia-line {
+      border-top: 2px dotted darkblue;
+      width: 150px;
+      animation: none;
+    }
+    @keyframes fadeOut {
+      0% { opacity: 1; }
+      100% { opacity: 0; }
+    }
+  </style>
+</head>
+<body>
+  <h1>Satoliya Traditional Gully Game</h1>
+  <audio autoplay loop>
+    <source src="https://www.bensound.com/bensound-music/bensound-buddy.mp3" type="audio/mpeg">
+    Your browser does not support the audio element.
+  </audio>
+  <div class="game-container" id="gameContainer">
+    <div class="physics-info">
+      <strong>Physics Concepts in Action:</strong><br>
+      🎯 <strong>Projectile Motion:</strong> Ball curves toward target due to gravity.<br>
+      💥 <strong>Collision & Momentum:</strong> Ball impacts stones causing scattering.<br>
+      🌀 <strong>Newton's First Law (Inertia):</strong> The pithu, when undisturbed, remains stationary.<br>
+      🔄 <strong>Energy Conversion:</strong> Potential to kinetic during movement.<br>
+      ⚡ <strong>Friction:</strong> Affects stone sliding after impact.
+    </div>
+    <div class="stack" id="stack"></div>
+    <div class="ball" id="ball" onclick="shootBall();"></div>
+    <div class="scoreboard" id="scoreboard">Score: 0</div>
+    <div class="timer" id="timer">Time: 10</div>
+    <button class="start-btn" onclick="startLevel()">Start Game</button>
+  </div>
+
+  <script>
+    let rebuildCount = 0;
+    let gameTimer;
+    let timeLeft = 10;
+    let score = 0;
+    let gameOver = false;
+
+    function updateScore(val) {
+      score = val;
+      document.getElementById('scoreboard').innerText = 'Score: ' + score;
+    }
+
+    function updateTimer() {
+      document.getElementById('timer').innerText = 'Time: ' + timeLeft;
+    }
+
+    function showMessage(text, x = 300, y = 100) {
+      const msg = document.createElement('div');
+      msg.className = 'info-msg';
+      msg.style.left = `${x}px`;
+      msg.style.top = `${y}px`;
+      msg.innerText = text;
+      document.getElementById('gameContainer').appendChild(msg);
+      setTimeout(() => msg.remove(), 3000);
+    }
+
+    function showInertiaLine() {
+      const stack = document.getElementById('stack');
+      const line = document.createElement('div');
+      line.className = 'inertia-line';
+      line.style.left = `${stack.offsetLeft - 160}px`;
+      line.style.top = `${stack.offsetTop + 60}px`;
+      line.innerText = "🌀 Newton's First Law (Inertia): The pithu, when undisturbed, remains stationary.";
+      document.getElementById('gameContainer').appendChild(line);
+      setTimeout(() => line.remove(), 4000);
+    }
+
+    function shootBall() {
+      if (gameOver) return;
+      const ball = document.getElementById('ball');
+      const stack = document.getElementById('stack');
+      const startX = 100;
+      const startY = 420;
+      const endX = stack.offsetLeft + stack.offsetWidth / 2 - 15;
+      const endY = stack.offsetTop + stack.offsetHeight / 2 - 15;
+      showMessage("🎯 Projectile Motion", startX + 50, startY - 50);
+      ball.style.transition = 'left 0.8s ease-out, top 0.8s ease-out';
+      ball.style.left = `${endX}px`;
+      ball.style.top = `${endY}px`;
+      setTimeout(() => {
+        scatterStones();
+        ball.style.left = `${endX + 100}px`;
+        ball.style.top = `${endY + 30}px`;
+      }, 800);
+    }
+
+    function scatterStones() {
+      const stack = document.getElementById('stack');
+      const stones = Array.from(stack.children);
+      stack.innerHTML = '';
+      const container = document.getElementById('gameContainer');
+      stones.forEach(stone => {
+        stone.style.position = 'absolute';
+        stone.style.left = `${Math.random() * 700}px`;
+        stone.style.top = `${Math.random() * 400}px`;
+        stone.onclick = () => tryRebuildStone(stone);
+        container.appendChild(stone);
+      });
+      showMessage("💥 Impact Forces", 300, 200);
+    }
+
+    function tryRebuildStone(stone) {
+      if (gameOver) return;
+      const stack = document.getElementById('stack');
+      if (!stone.classList.contains('rebuilt')) {
+        stone.classList.add('rebuilt');
+        stone.style.position = '';
+        stone.style.left = '';
+        stone.style.top = '';
+        stack.appendChild(stone);
+        rebuildCount++;
+        showMessage("🧱 The process of rebuilding the stack involves potential energy and stability", stack.offsetLeft, stack.offsetTop - 40);
+        if (rebuildCount === 7) {
+          gameOver = true;
+          clearInterval(gameTimer);
+          updateScore(1);
+          setTimeout(() => {
+            alert("🎉 You Win and you have learned that Pithu is a traditional gully game which teaches us about physics concept.");
+          }, 700);
+        }
+      }
+    }
+
+    function startLevel() {
+      clearInterval(gameTimer);
+      gameOver = false;
+      timeLeft = 10;
+      updateTimer();
+      gameTimer = setInterval(() => {
+        timeLeft--;
+        updateTimer();
+        if (timeLeft <= 0) {
+          clearInterval(gameTimer);
+          if (!gameOver) {
+            gameOver = true;
+            alert("⏱️ Time's up! Game Over.");
+          }
+        }
+      }, 1000);
+
+      const stack = document.getElementById('stack');
+      stack.innerHTML = '';
+      rebuildCount = 0;
+      for (let i = 0; i < 7; i++) {
+        const stone = document.createElement('div');
+        stone.className = 'stone';
+        stack.appendChild(stone);
+      }
+
+      const ball = document.getElementById('ball');
+      ball.style.left = '100px';
+      ball.style.top = '420px';
+      ball.style.display = 'block';
+      updateScore(0);
+
+      // Show Newton's First Law message
+      setTimeout(() => showInertiaLine(), 500);
+    }
+  </script>
+</body>
+</html>
