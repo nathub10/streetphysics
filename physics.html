@@ -111,10 +111,17 @@
 </head>
 <body>
   <h1>Satoliya Traditional Gully Game</h1>
-  <audio autoplay loop>
+  <audio id="bgMusic" autoplay loop muted>
     <source src="https://www.bensound.com/bensound-music/bensound-buddy.mp3" type="audio/mpeg">
     Your browser does not support the audio element.
   </audio>
+<h2>Game Rules</h2>
+    <ul>
+      <li>Hit the stacked stones with the ball.</li>
+      <li>Rearrange stones within 7 secs time limit.</li>
+      <li>Advance to next level after 2 successful hits.</li>
+      <li>In level 2 rearrange the stones within 5 secs time limit.</li>
+
   <div class="game-container" id="gameContainer">
     <div class="physics-info">
       <strong>Physics Concepts in Action:</strong><br>
@@ -137,6 +144,8 @@
     let timeLeft = 10;
     let score = 0;
     let gameOver = false;
+    let scatteredStones = [];
+    let level = 1;
 
     function updateScore(val) {
       score = val;
@@ -170,6 +179,7 @@
 
     function shootBall() {
       if (gameOver) return;
+      document.getElementById('bgMusic').muted = false;
       const ball = document.getElementById('ball');
       const stack = document.getElementById('stack');
       const startX = 100;
@@ -184,15 +194,18 @@
         scatterStones();
         ball.style.left = `${endX + 100}px`;
         ball.style.top = `${endY + 30}px`;
+        showMessage("⚡ Friction: Affects stone sliding after impact", endX + 120, endY + 30);
       }, 800);
     }
 
     function scatterStones() {
       const stack = document.getElementById('stack');
       const stones = Array.from(stack.children);
+      const numStones = level === 1 ? 7 : 5;
+      scatteredStones = stones.slice(0, numStones);
       stack.innerHTML = '';
       const container = document.getElementById('gameContainer');
-      stones.forEach(stone => {
+      scatteredStones.forEach(stone => {
         stone.style.position = 'absolute';
         stone.style.left = `${Math.random() * 700}px`;
         stone.style.top = `${Math.random() * 400}px`;
@@ -213,13 +226,18 @@
         stack.appendChild(stone);
         rebuildCount++;
         showMessage("🧱 The process of rebuilding the stack involves potential energy and stability", stack.offsetLeft, stack.offsetTop - 40);
-        if (rebuildCount === 7) {
-          gameOver = true;
+        const required = level === 1 ? 7 : 5;
+        if (rebuildCount === required) {
           clearInterval(gameTimer);
-          updateScore(1);
-          setTimeout(() => {
-            alert("🎉 You Win and you have learned that Pithu is a traditional gully game which teaches us about physics concept.");
-          }, 700);
+          if (level === 1) {
+            updateScore(1);
+            alert("🎉 Level 1 Complete!");
+            level = 2;
+            startLevel();
+          } else {
+            alert("🎉 You Win! You have learned that Pithu is a traditional gully game which teaches us about physics concepts.");
+            gameOver = true;
+          }
         }
       }
     }
@@ -227,7 +245,8 @@
     function startLevel() {
       clearInterval(gameTimer);
       gameOver = false;
-      timeLeft = 10;
+      rebuildCount = 0;
+      timeLeft = level === 1 ? 10 : 7;
       updateTimer();
       gameTimer = setInterval(() => {
         timeLeft--;
@@ -243,8 +262,8 @@
 
       const stack = document.getElementById('stack');
       stack.innerHTML = '';
-      rebuildCount = 0;
-      for (let i = 0; i < 7; i++) {
+      const stonesToAdd = level === 1 ? 7 : 5;
+      for (let i = 0; i < stonesToAdd; i++) {
         const stone = document.createElement('div');
         stone.className = 'stone';
         stack.appendChild(stone);
@@ -254,9 +273,8 @@
       ball.style.left = '100px';
       ball.style.top = '420px';
       ball.style.display = 'block';
-      updateScore(0);
 
-      // Show Newton's First Law message
+      if (level === 1) updateScore(0);
       setTimeout(() => showInertiaLine(), 500);
     }
   </script>
